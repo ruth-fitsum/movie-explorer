@@ -1,122 +1,123 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import Header from "./components/Header";
+import SearchBar from "./components/SearchBar";
+import ShowCard from "./components/ShowCard";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [shows, setShows] = useState([]);
+  const [search, setSearch] = useState("");
+  const [genre, setGenre] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchShows() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch(
+          "https://api.tvmaze.com/shows?page=0"
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch TV shows.");
+        }
+
+        const data = await response.json();
+
+        setShows(data);
+      } catch (err) {
+        setError(err.message || "Something went wrong.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchShows();
+  }, []);
+
+  const genres = [
+    "All",
+    ...new Set(shows.flatMap((show) => show.genres)),
+  ];
+
+  const filteredShows = shows.filter((show) => {
+    const matchesSearch = show.name
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    const matchesGenre =
+      genre === "All" || show.genres.includes(genre);
+
+    return matchesSearch && matchesGenre;
+  });
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <Header />
 
-      <div className="ticks"></div>
+      <main className="container">
+        <SearchBar search={search} setSearch={setSearch} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <div className="filter-container">
+          <label htmlFor="genre">Filter by genre:</label>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <select
+            id="genre"
+            value={genre}
+            onChange={(event) => setGenre(event.target.value)}
+          >
+            {genres.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {loading && <p className="message">Loading shows...</p>}
+
+        {error && <p className="error">{error}</p>}
+
+        {!loading && !error && (
+          <>
+            <h2>Explore TV Shows</h2>
+
+            <p className="results-count">
+              {filteredShows.length} shows found
+            </p>
+
+            <div className="shows-grid">
+              {filteredShows.map((show) => (
+                <ShowCard key={show.id} show={show} />
+              ))}
+            </div>
+
+            {filteredShows.length === 0 && (
+              <p className="message">
+                No shows found. Try another search.
+              </p>
+            )}
+          </>
+        )}
+      </main>
+
+      <footer className="footer">
+        <p>
+          TV data provided by{" "}
+          <a
+            href="https://www.tvmaze.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            TVmaze
+          </a>
+        </p>
+      </footer>
+    </div>
+  );
 }
 
-export default App
+export default App;
